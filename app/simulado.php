@@ -279,3 +279,34 @@ function evolution_by_group(int $userId): array {
   return $rows;
 }
 
+function dashboard_timeseries(int $userId): array {
+  $pdo = db();
+
+  // 1 linha por simulado, com contagem de acertos/total (consciente = acerto)
+  $stmt = $pdo->prepare("
+    SELECT
+      s.id AS simulado_id,
+      s.group_name,
+      s.applied_date,
+      s.name AS simulado_name,
+      COUNT(q.id) AS total,
+      SUM(CASE WHEN q.status='consciente' THEN 1 ELSE 0 END) AS correct
+    FROM simulados s
+    LEFT JOIN questions q ON q.simulado_id = s.id
+    WHERE s.user_id = ?
+    GROUP BY s.id
+    ORDER BY s.applied_date ASC, s.id ASC
+  ");
+  $stmt->execute([$userId]);
+  $rows = $stmt->fetchAll();
+
+  // Normaliza tipos
+  foreach ($rows as &$r) {
+    $r['simulado_id'] = (int)$r['simulado_id'];
+    $r['total'] = (int)$r['total'];
+    $r['correct'] = (int)$r['correct'];
+  }
+  unset($r);
+
+  return $rows;
+}

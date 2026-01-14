@@ -4,46 +4,114 @@
   function safeGet(id){ return document.getElementById(id); }
 
   const evo = window.__EVOLUTION__ || null;
-  if (evo && safeGet('chartMedia') && safeGet('chartSimulados')) {
-    const ctx1 = safeGet('chartMedia');
-    const ctx2 = safeGet('chartSimulados');
+const tsAll = window.__DASH_TS__ || [];
 
-    const makeData = (rows) => ({
-      labels: rows.map(r => r.group_name),
-      medias: rows.map(r => Number(r.media || 0)),
-      simulados: rows.map(r => Number(r.simulados || 0))
-    });
+if (evo && safeGet('chartMedia')) {
+  const ctx1 = safeGet('chartMedia');
 
-    let current = makeData(evo);
+  const makeData = (rows) => ({
+    labels: rows.map(r => r.group_name),
+    medias: rows.map(r => Number(r.media || 0)),
+  });
 
-    const chartMedia = new Chart(ctx1, {
-      type: 'line',
-      data: { labels: current.labels, datasets: [{ label: 'Média de acerto (%)', data: current.medias }] },
-      options: { responsive:true, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true, max:100 } } }
-    });
+  const applyGroup = (groupValue) => {
+    const rows = (groupValue === '__all') ? evo : evo.filter(r => r.group_name === groupValue);
+    return rows;
+  };
 
-    const chartSim = new Chart(ctx2, {
-      type: 'bar',
-      data: { labels: current.labels, datasets: [{ label: 'Simulados feitos', data: current.simulados }] },
-      options: { responsive:true, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true } } }
-    });
+  const chartMedia = new Chart(ctx1, {
+    type: 'line',
+    data: { labels: makeData(evo).labels, datasets: [{ label: 'Média de acerto (%)', data: makeData(evo).medias }] },
+    options: { responsive:true, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true, max:100 } } }
+  });
 
-    const groupSelect = safeGet('groupSelect');
-    if (groupSelect) {
-      groupSelect.addEventListener('change', () => {
-        const v = groupSelect.value;
-        const rows = (v === '__all') ? evo : evo.filter(r => r.group_name === v);
-        const d = makeData(rows);
-        chartMedia.data.labels = d.labels;
-        chartMedia.data.datasets[0].data = d.medias;
-        chartMedia.update();
+  function setTrendText(el, trend) {
+    if (!el) return;
+    el.classList.remove('dp-trend-pos','dp-trend-neg','dp-trend-neu');
 
-        chartSim.data.labels = d.labels;
-        chartSim.data.datasets[0].data = d.simulados;
-        chartSim.update();
-      });
-    }
+    if (trend === 'Positiva') el.classList.add('dp-trend-pos');
+    else if (trend === 'Negativa') el.classList.add('dp-trend-neg');
+    else el.classList.add('dp-trend-neu');
+
+    el.textContent = trend;
   }
+
+  function updateBoxes(groupValue) {
+    const boxTotal = document.getElementById('boxTotalAcertos');
+    const boxSim = document.getElementById('boxSimuladosFeitos');
+    const boxRec = document.getElementById('boxAcertoRecente');
+    const boxTen = document.getElementById('boxTendencia');
+
+    // Filtra TS por grupo
+    const ts = (groupValue === '__all')
+      ? tsAll.slice()
+      : tsAll.filter(r => r.group_name === groupValue);
+
+    // Simulados feitos
+    const simCount = new Set(ts.map(r => String(r.simulado_id))).size;
+
+    // Total de acertos (correct)
+    const totalAcertos = ts.reduce((acc, r) => acc + Number(r.correct || 0), 0);
+
+    // Últimos 5 simulados (por data desc)
+    const last5 = ts
+      .slice()
+      .sort((a,b) => String(b.applied_date).localeCompare(String(a.applied_date)) || (Number(b.simulado_id)-Number(a.simulado_id)))
+      .slice(0, 5);
+
+    const rates = last5.map(r => {
+      const total = Number(r.total || 0);
+      const correct = Number(r.correct || 0);
+      return total > 0 ? (correct / total) * 100 : 0;
+    });
+
+    const recentAvg = rates.length
+      ? (rates.reduce((a,b)=>a+b,0) / rates.length)
+      : 0;
+
+    // Tendência: compara primeiro vs último dentro do recorte dos 5 (do mais antigo para o mais recente)
+    const ratesChrono = last5.slice().reverse().map(r => {
+      const total = Number(r.total || 0);
+      const correct = Number(r.correct || 0);
+      return total > 0 ? (correct / total) * 100 : 0;
+    });
+
+    let trend = 'Neutra';
+    if (ratesChrono.length >= 2) {
+      const delta = ratesChrono[ratesChrono.length - 1] - ratesChrono[0];
+      if (delta > 2) trend = 'Positiva';
+      else if (delta < -2) trend = 'Negativa';
+    }
+
+    if (boxTotal) boxTotal.textContent = String(totalAcertos);
+    if (boxSim) boxSim.textContent = String(simCount);
+    if (boxRec) boxRec.textContent = `${recentAvg.toFixed(1)}%`;
+    setTrendText(boxTen, trend);
+  }
+
+  const groupSelect = safeGet('groupSelect');
+  if (groupSelect) {
+    groupSelect.addEventListener('change', () => {
+      const v = groupSelect.value;
+
+      const rows = applyGroup(v);
+      const d = makeData(rows);
+
+      chartMedia.data.labels = d.labels;
+      chartMedia.data.datasets[0].data = d.medias;
+      chartMedia.update();
+
+      updateBoxes(v);
+    });
+
+    // inicial
+    updateBoxes(groupSelect.value || '__all');
+  } else {
+    // fallback se não achar select
+    updateBoxes('__all');
+  }
+}
+
 
   const diag = window.__DIAG__ || null;
   if (diag && safeGet('chartPie') && safeGet('chartBars')) {

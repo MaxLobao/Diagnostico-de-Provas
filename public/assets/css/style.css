@@ -189,6 +189,20 @@
   }
 }
 
+.dp-metric-label{
+  font-size: 12px;
+  color: #6b7280;
+}
+.dp-metric-value{
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.dp-trend-pos{ color:#16a34a; }
+.dp-trend-neg{ color:#dc2626; }
+.dp-trend-neu{ color:#111827; }
+
 
 /* Mobile */
 @media (max-width: 991px) {

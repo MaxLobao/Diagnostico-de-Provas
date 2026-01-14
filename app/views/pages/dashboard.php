@@ -148,22 +148,55 @@ $qtSim = array_map(fn($r) => (int)$r['simulados'], $evo);
                     </div>
                   </div>
 
-                  <div class="row g-3">
-                    <div class="col-12 col-lg-6">
+                  <div class="d-flex align-center row g-3">
+                    <div class="col-12 col-lg-8">
                       <div class="p-3 bg-white rounded-4">
                         <canvas id="chartMedia"></canvas>
                       </div>
                     </div>
-                    <div class="col-12 col-lg-6">
+                    <div class="col-12 col-lg-4">
                       <div class="p-3 bg-white rounded-4">
-                        <canvas id="chartSimulados"></canvas>
+                        <div class="row gap-8">
+                          <div class="col-12">
+                            <div class="stat-pill">
+                              <div class="dp-metric-label">Total de acertos</div>
+                              <div class="dp-metric-value" id="boxTotalAcertos">0</div>
+                            </div>
+                          </div>
+
+                          <div class="col-12">
+                            <div class="stat-pill">
+                              <div class="dp-metric-label">Simulados feitos</div>
+                              <div class="dp-metric-value" id="boxSimuladosFeitos">0</div>
+                            </div>
+                          </div>
+
+                          <div class="col-12">
+                            <div class="stat-pill">
+                              <div class="dp-metric-label">Acerto recente (últimos 5)</div>
+                              <div class="dp-metric-value" id="boxAcertoRecente">0%</div>
+                            </div>
+                          </div>
+
+                          <div class="col-12">
+                            <div class="stat-pill">
+                              <div class="dp-metric-label">Tendência (últimos 5)</div>
+                              <div class="dp-metric-value" id="boxTendencia">Neutra</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  <?php
+                    $dash_ts = dashboard_timeseries((int)$u['id']);
+                  ?>
                   <script>
                     window.__EVOLUTION__ = <?= json_encode($evo, JSON_UNESCAPED_UNICODE) ?>;
+                    window.__DASH_TS__   = <?= json_encode($dash_ts, JSON_UNESCAPED_UNICODE) ?>;
                   </script>
+
 
                 </div>
               </div>
